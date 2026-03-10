@@ -540,17 +540,37 @@
 
     const promptText = box.textContent;
 
-    navigator.clipboard.writeText(promptText).then(() => {
+    function onSuccess() {
       btn.textContent = 'Copied';
       btn.classList.add('copied');
       setTimeout(() => {
         btn.textContent = 'Copy Prompt';
         btn.classList.remove('copied');
       }, 1500);
-
-      // Save to history
       saveToHistory(promptText);
-    });
+    }
+
+    // Try modern clipboard API first, fallback to execCommand
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(promptText).then(onSuccess).catch(() => {
+        fallbackCopy(promptText);
+        onSuccess();
+      });
+    } else {
+      fallbackCopy(promptText);
+      onSuccess();
+    }
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
   }
 
   // --- History ---
