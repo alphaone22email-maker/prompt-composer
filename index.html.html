@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Composer</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface-hover: #242424;
+    --border: #2a2a2a;
+    --border-active: #4a3f2f;
+    --text: #d4cfc7;
+    --text-dim: #7a756d;
+    --text-bright: #ede8df;
+    --accent: #c9a96e;
+    --accent-dim: #8a7345;
+    --accent-glow: rgba(201,169,110,0.12);
+    --green: #6b9a6b;
+    --radius: 6px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-size: 2rem;
+    color: var(--text-bright);
+    letter-spacing: 0.03em;
+    margin-bottom: 0.3rem;
+  }
+
+  header p {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .category {
+    margin-bottom: 1.8rem;
+  }
+
+  .cat-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .cat-number {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem;
+    color: var(--accent);
+    font-weight: 600;
+    min-width: 1.5rem;
+  }
+
+  .cat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+  }
+
+  .cat-locked {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--green);
+    margin-left: auto;
+  }
+
+  .edit-btn {
+    display: none;
+    margin-left: auto;
+    padding: 0.2rem 0.6rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .edit-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .edit-btn.visible {
+    display: inline-block;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.75rem;
+    resize: vertical;
+    min-height: 70px;
+    transition: border-color 0.2s;
+    line-height: 1.5;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent-dim);
+  }
+
+  textarea::placeholder {
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .parse-btn {
+    display: inline-block;
+    margin-top: 0.4rem;
+    padding: 0.35rem 0.9rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .parse-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .options-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+    min-height: 0;
+  }
+
+  .option-chip {
+    padding: 0.45rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1.3;
+  }
+
+  .option-chip:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent-dim);
+  }
+
+  .option-chip.selected {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .option-chip.locked {
+    background: rgba(107,154,107,0.1);
+    border-color: var(--green);
+    color: var(--green);
+    cursor: default;
+    font-weight: 500;
+  }
+
+  /* Output section */
+  .output-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .output-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.2rem;
+    color: var(--text-bright);
+    margin-bottom: 0.8rem;
+  }
+
+  .output-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    min-height: 48px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-dim);
+    font-style: italic;
+    transition: all 0.3s;
+  }
+
+  .output-box.has-content {
+    color: var(--text-bright);
+    font-style: normal;
+    border-color: var(--accent-dim);
+  }
+
+  .copy-btn {
+    display: block;
+    width: 100%;
+    margin-top: 0.8rem;
+    padding: 0.7rem;
+    background: transparent;
+    border: 1px solid var(--accent-dim);
+    border-radius: var(--radius);
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .copy-btn:hover {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+  }
+
+  .copy-btn.copied {
+    background: rgba(107,154,107,0.15);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .reset-btn {
+    display: block;
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .reset-btn:hover {
+    border-color: #6b3a3a;
+    color: #c97070;
+  }
+
+  .reset-selections:hover {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Prompt Composer</h1>
+    <p>Paste &middot; Select &middot; Copy</p>
+  </header>
+
+  <!-- Category 1: Tone -->
+  <div class="category" id="cat1">
+    <div class="cat-header">
+      <span class="cat-number">1.</span>
+      <span class="cat-label">Tone</span>
+      <button class="edit-btn" id="edit1" onclick="editOptions(1)">Edit</button>
+    </div>
+    <textarea id="input1" placeholder="Paste tone options here..."></textarea>
+    <button class="parse-btn" onclick="parseOptions(1)">Parse Options</button>
+    <div class="options-grid" id="chips1"></div>
+  </div>
+
+  <!-- Category 2: Emotion -->
+  <div class="category" id="cat2">
+    <div class="cat-header">
+      <span class="cat-number">2.</span>
+      <span class="cat-label">Emotion</span>
+      <button class="edit-btn" id="edit2" onclick="editOptions(2)">Edit</button>
+    </div>
+    <textarea id="input2" placeholder="Paste emotion options here..."></textarea>
+    <button class="parse-btn" onclick="parseOptions(2)">Parse Options</button>
+    <div class="options-grid" id="chips2"></div>
+  </div>
+
+  <!-- Category 3: Thread -->
+  <div class="category" id="cat3">
+    <div class="cat-header">
+      <span class="cat-number">3.</span>
+      <span class="cat-label">Thread</span>
+      <button class="edit-btn" id="edit3" onclick="editOptions(3)">Edit</button>
+    </div>
+    <textarea id="input3" placeholder="Paste thread options here..."></textarea>
+    <button class="parse-btn" onclick="parseOptions(3)">Parse Options</button>
+    <div class="options-grid" id="chips3"></div>
+  </div>
+
+  <!-- Category 4: Format (locked) -->
+  <div class="category" id="cat4">
+    <div class="cat-header">
+      <span class="cat-number">4.</span>
+      <span class="cat-label">Format</span>
+      <span class="cat-locked">Locked</span>
+    </div>
+    <div class="options-grid" id="chips4">
+      <span class="option-chip locked">Standalone</span>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="output-section">
+    <div class="output-label">Assembled Prompt</div>
+    <div class="output-box" id="outputBox">Select one option from each category...</div>
+    <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy Prompt</button>
+    <button class="reset-btn reset-selections" onclick="resetSelections()">Reset Selections</button>
+    <button class="reset-btn" onclick="resetAll()">Reset All</button>
+  </div>
+</div>
+
+<script>
+  const selections = { 1: null, 2: null, 3: null, 4: 'Standalone' };
+
+  function parseOptions(catNum) {
+    const raw = document.getElementById(`input${catNum}`).value.trim();
+    if (!raw) return;
+
+    // Parse lines — handles various formats:
+    // "Option A", "1. Option A", "- Option A", bullet points, newlines
+    const options = raw
+      .split(/\n/)
+      .map(line => line.replace(/^[\s\-\•\*\d]+[\.\)\:]?\s*/, '').trim())
+      .filter(line => line.length > 0);
+
+    const container = document.getElementById(`chips${catNum}`);
+    container.innerHTML = '';
+
+    options.forEach(opt => {
+      const chip = document.createElement('span');
+      chip.className = 'option-chip';
+      chip.textContent = opt;
+      chip.addEventListener('click', () => selectOption(catNum, opt, chip));
+      container.appendChild(chip);
+    });
+
+    // Collapse textarea, show edit button
+    document.getElementById(`input${catNum}`).style.display = 'none';
+    document.querySelector(`#cat${catNum} .parse-btn`).style.display = 'none';
+    document.getElementById(`edit${catNum}`).classList.add('visible');
+  }
+
+  function selectOption(catNum, value, chipEl) {
+    // Deselect siblings
+    const siblings = chipEl.parentElement.querySelectorAll('.option-chip');
+    siblings.forEach(s => s.classList.remove('selected'));
+
+    // Select this one
+    chipEl.classList.add('selected');
+    selections[catNum] = value;
+
+    updateOutput();
+  }
+
+  function updateOutput() {
+    const box = document.getElementById('outputBox');
+    const parts = [];
+    let complete = true;
+
+    for (let i = 1; i <= 4; i++) {
+      if (selections[i]) {
+        parts.push(`${i}. ${selections[i]}`);
+      } else {
+        complete = false;
+      }
+    }
+
+    if (parts.length === 0) {
+      box.textContent = 'Select one option from each category...';
+      box.classList.remove('has-content');
+    } else {
+      box.textContent = parts.join(', ');
+      box.classList.toggle('has-content', complete);
+      if (!complete) {
+        box.classList.add('has-content');
+      }
+    }
+  }
+
+  function copyPrompt() {
+    const box = document.getElementById('outputBox');
+    const btn = document.getElementById('copyBtn');
+
+    if (!selections[1] && !selections[2] && !selections[3]) return;
+
+    navigator.clipboard.writeText(box.textContent).then(() => {
+      btn.textContent = 'Copied';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy Prompt';
+        btn.classList.remove('copied');
+      }, 1500);
+    });
+  }
+
+  function editOptions(catNum) {
+    // Reconstruct current chip text back into the textarea
+    const chips = document.querySelectorAll(`#chips${catNum} .option-chip`);
+    const lines = Array.from(chips).map(c => c.textContent);
+    const input = document.getElementById(`input${catNum}`);
+    input.value = lines.join('\n');
+    input.style.display = '';
+    document.querySelector(`#cat${catNum} .parse-btn`).style.display = '';
+    document.getElementById(`edit${catNum}`).classList.remove('visible');
+    document.getElementById(`chips${catNum}`).innerHTML = '';
+    selections[catNum] = null;
+    updateOutput();
+  }
+
+  function resetSelections() {
+    for (let i = 1; i <= 3; i++) {
+      selections[i] = null;
+      const chips = document.querySelectorAll(`#chips${i} .option-chip`);
+      chips.forEach(c => c.classList.remove('selected'));
+    }
+    updateOutput();
+  }
+
+  function resetAll() {
+    for (let i = 1; i <= 3; i++) {
+      selections[i] = null;
+      const input = document.getElementById(`input${i}`);
+      input.value = '';
+      input.style.display = '';
+      document.querySelector(`#cat${i} .parse-btn`).style.display = '';
+      document.getElementById(`edit${i}`).classList.remove('visible');
+      document.getElementById(`chips${i}`).innerHTML = '';
+    }
+    updateOutput();
+  }
+
+  // Initialize output
+  updateOutput();
+</script>
+</body>
+</html>
