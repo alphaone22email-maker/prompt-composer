@@ -292,6 +292,100 @@
     color: var(--accent);
   }
 
+  /* History section */
+  .history-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .history-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    color: var(--text-dim);
+    transition: color 0.2s;
+  }
+
+  .history-toggle:hover { color: var(--text-bright); }
+
+  .history-toggle .arrow {
+    font-size: 0.7rem;
+    transition: transform 0.25s;
+    color: var(--text-dim);
+  }
+
+  .history-toggle.open .arrow { transform: rotate(180deg); }
+
+  .history-count {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    background: var(--surface);
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    margin-left: 0.6rem;
+  }
+
+  .history-list {
+    display: none;
+    margin-top: 0.5rem;
+  }
+
+  .history-list.open { display: block; }
+
+  .history-entry {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.6rem 0.7rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .history-entry-text { flex: 1; }
+
+  .history-entry-time {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    padding-top: 0.1rem;
+  }
+
+  .history-clear {
+    display: block;
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.4rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .history-clear:hover {
+    border-color: #6b3a3a;
+    color: #c97070;
+  }
+
   .hidden { display: none; }
 </style>
 </head>
@@ -357,6 +451,16 @@
     <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy Prompt</button>
     <button class="reset-btn reset-selections" onclick="resetSelections()">Reset Selections</button>
     <button class="reset-btn" onclick="resetAll()">Reset All</button>
+  </div>
+
+  <!-- History -->
+  <div class="history-section">
+    <button class="history-toggle" id="historyToggle" onclick="toggleHistory()">
+      <span>History <span class="history-count" id="historyCount">0</span></span>
+      <span class="arrow">&#9660;</span>
+    </button>
+    <div class="history-list" id="historyList"></div>
+    <button class="history-clear" id="historyClear" style="display:none;" onclick="clearHistory()">Clear History</button>
   </div>
 </div>
 
@@ -434,14 +538,82 @@
 
     if (!selections[1] && !selections[2] && !selections[3]) return;
 
-    navigator.clipboard.writeText(box.textContent).then(() => {
+    const promptText = box.textContent;
+
+    navigator.clipboard.writeText(promptText).then(() => {
       btn.textContent = 'Copied';
       btn.classList.add('copied');
       setTimeout(() => {
         btn.textContent = 'Copy Prompt';
         btn.classList.remove('copied');
       }, 1500);
+
+      // Save to history
+      saveToHistory(promptText);
     });
+  }
+
+  // --- History ---
+  function getHistory() {
+    try {
+      return JSON.parse(localStorage.getItem('promptHistory') || '[]');
+    } catch { return []; }
+  }
+
+  function saveToHistory(text) {
+    const history = getHistory();
+    // Don't save duplicates of the last entry
+    if (history.length > 0 && history[0].text === text) return;
+    history.unshift({ text, time: new Date().toISOString() });
+    localStorage.setItem('promptHistory', JSON.stringify(history));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const history = getHistory();
+    const list = document.getElementById('historyList');
+    const count = document.getElementById('historyCount');
+    const clearBtn = document.getElementById('historyClear');
+
+    count.textContent = history.length;
+    clearBtn.style.display = history.length > 0 && list.classList.contains('open') ? '' : 'none';
+
+    list.innerHTML = '';
+    history.forEach(entry => {
+      const div = document.createElement('div');
+      div.className = 'history-entry';
+
+      const d = new Date(entry.time);
+      const timeStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+      div.innerHTML = `<span class="history-entry-text">${escapeHtml(entry.text)}</span><span class="history-entry-time">${timeStr}</span>`;
+      list.appendChild(div);
+    });
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function toggleHistory() {
+    const toggle = document.getElementById('historyToggle');
+    const list = document.getElementById('historyList');
+    const clearBtn = document.getElementById('historyClear');
+    const history = getHistory();
+
+    toggle.classList.toggle('open');
+    list.classList.toggle('open');
+    clearBtn.style.display = list.classList.contains('open') && history.length > 0 ? '' : 'none';
+  }
+
+  function clearHistory() {
+    if (!confirm('Clear all history?')) return;
+    localStorage.removeItem('promptHistory');
+    renderHistory();
+    document.getElementById('historyClear').style.display = 'none';
   }
 
   function editOptions(catNum) {
@@ -480,8 +652,9 @@
     updateOutput();
   }
 
-  // Initialize output
+  // Initialize
   updateOutput();
+  renderHistory();
 </script>
 </body>
 </html>
